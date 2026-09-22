@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Settings:
-    MYSQL_USER: str = os.getenv("MYSQL_USER", "root")
-    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "123456")
+    MYSQL_USER: str = os.getenv("MYSQL_USER", "seu_usuario")
+    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "sua_senha")
     MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
     MYSQL_PORT: str = os.getenv("MYSQL_PORT", "3306")
     MYSQL_DB: str = os.getenv("MYSQL_DB", "sesi_gestao")
