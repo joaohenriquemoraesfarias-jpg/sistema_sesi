@@ -1,1 +1,2 @@
+# Sistema Web De Gerenciamento de Fila de Espera
 Sistema web para gerenciamento da fila de espera de matrículas do SESI, com priorização automática, autenticação segura, painel administrativo, auditoria, testes automatizados e recursos de acessibilidade.
