@@ -1,7 +1,7 @@
 /*
  * Lembretes: anotações pessoais do usuário logado (cada um só vê os seus).
  */
-import { appState, API_URL, authHeaders } from './state.js';
+import { appState, API_URL, authHeaders, escapeHtml } from './state.js';
 import { showToast, showConfirm, showSuccessBanner } from './ui.js';
 import { handleAuthResponse } from './auth.js';
 
@@ -49,8 +49,8 @@ function renderReminderItem(r) {
     return `
         <div class="reminder-item ${r.concluido ? 'completed' : ''}">
             <input type="checkbox" ${r.concluido ? 'checked' : ''} onchange="toggleReminder(${r.id}, this.checked)">
-            <span class="reminder-text">${r.texto}</span>
-            <span class="reminder-date">${r.concluido ? `concluído em ${r.concluidoEm}` : r.createdAt}</span>
+            <span class="reminder-text">${escapeHtml(r.texto)}</span>
+            <span class="reminder-date">${r.concluido ? `concluído em ${escapeHtml(r.concluidoEm)}` : escapeHtml(r.createdAt)}</span>
             <button class="btn-delete-reminder" onclick="deleteReminder(${r.id})" title="Apagar lembrete">✕</button>
         </div>
     `;

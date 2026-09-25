@@ -32,3 +32,20 @@ export function authHeaders() {
         'Authorization': `Bearer ${appState.authToken}`
     };
 }
+
+// Escapa caracteres especiais de HTML antes de inserir um valor vindo do
+// usuário (nome, endereço, lembrete etc.) dentro de um template `innerHTML`.
+// Sem isso, alguém poderia cadastrar um aluno com nome tipo
+// `<img src=x onerror="...">` e esse código rodaria de verdade no navegador
+// de quem visse a lista (inclusive o Admin, ao ver o Histórico) — é o que
+// se chama de XSS armazenado (Stored XSS). Use SEMPRE que for colocar um
+// valor vindo da API dentro de um template `${...}` que vira innerHTML.
+export function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}

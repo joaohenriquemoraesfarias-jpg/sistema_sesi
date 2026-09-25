@@ -7,5 +7,5 @@ echo IMPORTANTE: NAO aperte Ctrl+C nesta janela, exceto quando quiser
 echo desligar o sistema de proposito. Para copiar um texto daqui,
 echo selecione o texto com o mouse e clique com o botao direito.
 echo.
-python -m uvicorn app.main:app --port 8000
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 pause

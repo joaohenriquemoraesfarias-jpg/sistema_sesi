@@ -1,9 +1,11 @@
+import secrets
 from sqlalchemy.orm import Session
 from sqlalchemy import case, asc
 from app.models import Student, Sibling, HistoryLog, User, CategoryEnum, UserRoleEnum, Reminder
 from app.schemas import StudentCreate, UserCreate
 from datetime import datetime
 from app.security import hash_password
+from app.config import settings
 
 # --- MAPEAMENTO DE PRIORIDADE DE CATEGORIA ---
 CATEGORY_PRIORITY = {
@@ -14,18 +16,55 @@ CATEGORY_PRIORITY = {
     CategoryEnum.COMUNIDADE: 5
 }
 
+def find_student_by_cpf(db: Session, cpf: str, exclude_id: int = None):
+    """
+    Procura um aluno com o mesmo CPF, ignorando diferenças de formatação
+    (com ou sem pontos/traço) — assim, "529.982.247-25" e "52998224725"
+    são reconhecidos como o mesmo CPF na hora de checar duplicidade.
+    """
+    digits = "".join(ch for ch in (cpf or "") if ch.isdigit())
+    if not digits:
+        return None
+
+    query = db.query(Student).filter(Student.student_cpf.isnot(None))
+    if exclude_id is not None:
+        query = query.filter(Student.id != exclude_id)
+
+    for student in query.all():
+        student_digits = "".join(ch for ch in (student.student_cpf or "") if ch.isdigit())
+        if student_digits == digits:
+            return student
+    return None
+
 def create_default_user(db: Session):
     """Cria o usuário 'admin' padrão caso não exista no banco de dados."""
     user_exists = db.query(User).filter(User.login == "admin").first()
-    if not user_exists:
-        admin_user = User(
-            name="Administrador",
-            login="admin",
-            pass_hash=hash_password("Sesi@2026!"),
-            role=UserRoleEnum.ADMIN
-        )
-        db.add(admin_user)
-        db.commit()
+    if user_exists:
+        return
+
+    # A senha inicial NÃO fica mais escrita aqui no código (qualquer pessoa com
+    # acesso aos arquivos do projeto — zip, pen drive, GitHub — conheceria a
+    # senha do administrador). Ela vem do arquivo .env (ADMIN_DEFAULT_PASSWORD).
+    senha_inicial = settings.ADMIN_DEFAULT_PASSWORD
+    if not senha_inicial:
+        # Se ninguém definiu no .env, geramos uma senha aleatória forte e
+        # mostramos UMA vez aqui no console do servidor — ela nunca fica salva
+        # em texto puro em lugar nenhum (no banco vai só o hash bcrypt).
+        senha_inicial = secrets.token_urlsafe(12)
+        print("!" * 60)
+        print("ATENCAO: ADMIN_DEFAULT_PASSWORD nao definida no .env.")
+        print(f"Senha inicial do usuario 'admin' gerada: {senha_inicial}")
+        print("Anote-a agora e troque-a no Painel Admin no primeiro acesso.")
+        print("!" * 60)
+
+    admin_user = User(
+        name="Administrador",
+        login="admin",
+        pass_hash=hash_password(senha_inicial),
+        role=UserRoleEnum.ADMIN
+    )
+    db.add(admin_user)
+    db.commit()
 
 def migrate_password_to_hash(db: Session, user: User, plain_password: str):
     """

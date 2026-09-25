@@ -1,7 +1,7 @@
 /*
  * Histórico de atividades (Painel Admin): consultar e limpar o log de auditoria.
  */
-import { API_URL, authHeaders } from './state.js';
+import { API_URL, authHeaders, escapeHtml } from './state.js';
 import { showToast, showConfirm, showSuccessBanner } from './ui.js';
 import { handleAuthResponse } from './auth.js';
 
@@ -22,10 +22,10 @@ async function renderHistory() {
         
         tbody.innerHTML = logs.map((log) => `
             <tr>
-                <td>${log.date}</td>
-                <td>${log.action}</td>
-                <td>${log.details}</td>
-                <td>${log.user}</td>
+                <td>${escapeHtml(log.date)}</td>
+                <td>${escapeHtml(log.action)}</td>
+                <td>${escapeHtml(log.details)}</td>
+                <td>${escapeHtml(log.user)}</td>
             </tr>
         `).join('');
     } catch (error) {

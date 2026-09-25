@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Student
 from app.schemas import StudentCreate, StudentResponse
-from app.crud import create_student, get_ordered_queue, get_student_by_id, update_student, delete_student
+from app.crud import create_student, get_ordered_queue, get_student_by_id, update_student, delete_student, find_student_by_cpf
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/students", tags=["Alunos"])
@@ -67,9 +67,9 @@ def register_student(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    # 1. BLOQUEIO DE DUPLICATAS: Verifica se o CPF já existe
+    # 1. BLOQUEIO DE DUPLICATAS: Verifica se o CPF já existe (ignorando pontuação)
     if student_in.studentCpf:
-        aluno_existente = db.query(Student).filter(Student.student_cpf == student_in.studentCpf).first()
+        aluno_existente = find_student_by_cpf(db, student_in.studentCpf)
         if aluno_existente:
             raise HTTPException(status_code=400, detail="Este CPF já está na fila!")
 
@@ -107,10 +107,7 @@ def edit_student(
 
     # Bloqueia duplicidade de CPF apenas se o CPF mudou para um que já existe em outro registro
     if student_in.studentCpf:
-        outro = db.query(Student).filter(
-            Student.student_cpf == student_in.studentCpf,
-            Student.id != student_id
-        ).first()
+        outro = find_student_by_cpf(db, student_in.studentCpf, exclude_id=student_id)
         if outro:
             raise HTTPException(status_code=400, detail="Este CPF já está na fila em outro cadastro!")
 

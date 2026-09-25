@@ -2,7 +2,7 @@
  * Tudo relacionado a Aluno: formulário de cadastro/edição, validação de CPF,
  * comprovante (recibo), fila (Lista & Busca e Vagas e Ocupação).
  */
-import { appState, API_URL, authHeaders } from './state.js';
+import { appState, API_URL, authHeaders, escapeHtml } from './state.js';
 import { showToast, showConfirm, showSuccessBanner } from './ui.js';
 import { switchTabDirect, switchTab, renderAll, handleAuthResponse } from './auth.js';
 
@@ -42,6 +42,107 @@ function checkIrmao() {
     }
 }
 
+// --- FORMATAÇÃO AUTOMÁTICA (CPF/CNPJ) ---
+// Aplica a máscara enquanto a pessoa digita, sempre reconstruindo a partir
+// dos números "crus" (funciona bem mesmo colando o número de uma vez).
+// RG não tem uma máscara nacional fixa (varia por estado), por isso não é formatado.
+
+function formatCPF(value) {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+    return digits
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function formatCNPJ(value) {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 14);
+    return digits
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+// CEP: 00000-000 (8 dígitos)
+function formatCEP(value) {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+    return digits.replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+// Telefone: aceita fixo (00) 0000-0000 (10 dígitos) e celular (00) 00000-0000 (11 dígitos).
+// A formatação decide sozinha qual dos dois formatos usar, conforme a
+// quantidade de números já digitados.
+function formatTelefone(value) {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 10) {
+        return digits
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{4})(\d{1,4})$/, '$1-$2');
+    }
+    return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d{1,4})$/, '$1-$2');
+}
+
+// Confere se o CEP tem os 8 dígitos esperados (campo é opcional: vazio passa).
+function validarCEP(cep) {
+    const digits = (cep || '').replace(/\D/g, '');
+    return digits.length === 0 || digits.length === 8;
+}
+
+// Confere se o telefone tem 10 (fixo) ou 11 (celular) dígitos (campo é opcional: vazio passa).
+function validarTelefone(tel) {
+    const digits = (tel || '').replace(/\D/g, '');
+    return digits.length === 0 || digits.length === 10 || digits.length === 11;
+}
+
+// --- CAMPOS COM OPÇÃO "OUTRO" (Série, Estado Civil, Responsável Financeiro/Acadêmico) ---
+// Cada campo "baseId" (ex: "respFin") tem um select e, ao lado, um input
+// escondido chamado "baseId + Other" (ex: "respFinOther"), que só aparece
+// quando a pessoa escolhe "Outro".
+
+function toggleOtherField(baseId) {
+    const select = document.getElementById(baseId);
+    const otherInput = document.getElementById(baseId + 'Other');
+    if (!select || !otherInput) return;
+
+    const isOther = select.value === 'Outro';
+    otherInput.style.display = isOther ? 'block' : 'none';
+    otherInput.required = isOther;
+    if (!isOther) otherInput.value = '';
+}
+
+// Lê o valor "de verdade" do campo: se for "Outro", pega o texto digitado no campo extra
+function getFieldValue(baseId) {
+    const select = document.getElementById(baseId);
+    if (!select) return '';
+    if (select.value === 'Outro') {
+        return document.getElementById(baseId + 'Other')?.value.trim() || '';
+    }
+    return select.value;
+}
+
+// Preenche o campo na edição: se o valor salvo bate com uma opção da lista, seleciona ela;
+// se não bate com nenhuma (era um "Outro" antigo), seleciona "Outro" e mostra o texto salvo
+function setFieldValue(baseId, value, knownOptions) {
+    const select = document.getElementById(baseId);
+    if (!select) return;
+
+    if (knownOptions.includes(value)) {
+        select.value = value;
+        toggleOtherField(baseId);
+    } else {
+        select.value = 'Outro';
+        toggleOtherField(baseId);
+        const otherInput = document.getElementById(baseId + 'Other');
+        if (otherInput) otherInput.value = value || '';
+    }
+}
+
+const GRADE_OPTIONS = ['Educação Infantil', '1º Ano Fundamental', '2º Ano Fundamental', '3º Ano Fundamental', '4º Ano Fundamental', '5º Ano Fundamental', '6º Ano Fundamental', '7º Ano Fundamental', '8º Ano Fundamental', '9º Ano Fundamental', '1º Ano Médio', '2º Ano Médio', '3º Ano Médio'];
+const CIVIL_OPTIONS = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável'];
+const RESP_OPTIONS = ['Pai', 'Mãe'];
 
 function validarCPF(cpf) {
     cpf = (cpf || '').replace(/\D/g, '');
@@ -80,7 +181,7 @@ async function handleFormSubmit(event) {
         studentRg: document.getElementById('studentRg')?.value || null,
         studentCpf: document.getElementById('studentCpf')?.value || null,
         studentNat: document.getElementById('studentNat')?.value || null,
-        studentGrade: document.getElementById('studentGrade')?.value,
+        studentGrade: getFieldValue('studentGrade'),
         studentShift: document.getElementById('studentShift')?.value,
         studentLaudo: document.getElementById('studentLaudo')?.value,
         laudoDesc: document.getElementById('laudoDesc')?.value || null,
@@ -95,7 +196,7 @@ async function handleFormSubmit(event) {
         respNum: document.getElementById('respNum')?.value || null,
         respBairro: document.getElementById('respBairro')?.value || null,
         respCep: document.getElementById('respCep')?.value || null,
-        respCivil: document.getElementById('respCivil')?.value || null,
+        respCivil: getFieldValue('respCivil') || null,
         respEduc: document.getElementById('respEduc')?.value || null,
         respEmail: document.getElementById('respEmail')?.value || null,
         respCompany: document.getElementById('respCompany')?.value || null,
@@ -106,8 +207,8 @@ async function handleFormSubmit(event) {
         emailMae: document.getElementById('emailMae')?.value || null,
         telOutro: document.getElementById('telOutro')?.value || null,
         emailOutro: document.getElementById('emailOutro')?.value || null,
-        respFin: document.getElementById('respFin')?.value,
-        respAcad: document.getElementById('respAcad')?.value
+        respFin: getFieldValue('respFin'),
+        respAcad: getFieldValue('respAcad')
     };
 
     if (!validarCPF(payload.respCpf)) {
@@ -116,6 +217,22 @@ async function handleFormSubmit(event) {
     }
     if (payload.studentCpf && !validarCPF(payload.studentCpf)) {
         showToast('O CPF do aluno não é válido. Confira os números digitados.', 'error');
+        return;
+    }
+    if (!validarCEP(payload.respCep)) {
+        showToast('O CEP precisa ter 8 dígitos (formato 00000-000).', 'error');
+        return;
+    }
+    if (!validarTelefone(payload.telPai)) {
+        showToast('O telefone do Pai precisa ter 10 ou 11 dígitos.', 'error');
+        return;
+    }
+    if (!validarTelefone(payload.telMae)) {
+        showToast('O telefone da Mãe precisa ter 10 ou 11 dígitos.', 'error');
+        return;
+    }
+    if (!validarTelefone(payload.telOutro)) {
+        showToast('O telefone do Outro responsável precisa ter 10 ou 11 dígitos.', 'error');
         return;
     }
 
@@ -169,23 +286,23 @@ function showReceipt(student) {
     if (!body) return;
 
     const irmaosHtml = (student.irmaos && student.irmaos.length > 0)
-        ? `<p><strong>Irmãos na escola:</strong></p><ul>${student.irmaos.map((i) => `<li>${i.nome} — ${i.serie}</li>`).join('')}</ul>`
+        ? `<p><strong>Irmãos na escola:</strong></p><ul>${student.irmaos.map((i) => `<li>${escapeHtml(i.nome)} — ${escapeHtml(i.serie)}</li>`).join('')}</ul>`
         : '';
 
     body.innerHTML = `
         <h4>Dados do Aluno</h4>
-        <p><strong>Nome:</strong> ${student.studentName}</p>
-        <p><strong>Categoria:</strong> ${student.category}</p>
-        <p><strong>Série/Turno:</strong> ${student.studentGrade} / ${student.studentShift}</p>
+        <p><strong>Nome:</strong> ${escapeHtml(student.studentName)}</p>
+        <p><strong>Categoria:</strong> ${escapeHtml(student.category)}</p>
+        <p><strong>Série/Turno:</strong> ${escapeHtml(student.studentGrade)} / ${escapeHtml(student.studentShift)}</p>
         ${irmaosHtml}
 
         <h4>Responsável</h4>
-        <p><strong>Nome:</strong> ${student.respName}</p>
+        <p><strong>Nome:</strong> ${escapeHtml(student.respName)}</p>
 
         <h4>Situação na Fila</h4>
-        <p><strong>Data/Hora do cadastro:</strong> ${student.timestamp}</p>
+        <p><strong>Data/Hora do cadastro:</strong> ${escapeHtml(student.timestamp)}</p>
         <p><strong>Posição atual:</strong> ${student.position ? `${student.position}º lugar` : 'a definir'}</p>
-        <p><strong>Situação:</strong> ${student.status_vaga || 'Em processamento'}</p>
+        <p><strong>Situação:</strong> ${escapeHtml(student.status_vaga) || 'Em processamento'}</p>
         <p style="margin-top: 10px; color: #666; font-size: 0.9em;">A posição pode mudar conforme novos cadastros forem feitos, respeitando os critérios de prioridade do sistema.</p>
     `;
 
@@ -225,10 +342,10 @@ async function renderVagas() {
                 tbody.innerHTML = sortedStudents.map((s) => `
                     <tr>
                         <td><strong>${s.position}º</strong></td>
-                        <td>${s.timestamp}</td>
-                        <td>${s.studentName}</td>
-                        <td>${s.category}</td>
-                        <td><span class="status-vaga ${s.status_vaga === 'VAGA GARANTIDA' ? 'alocado' : 'espera'}">${s.status_vaga}</span></td>
+                        <td>${escapeHtml(s.timestamp)}</td>
+                        <td>${escapeHtml(s.studentName)}</td>
+                        <td>${escapeHtml(s.category)}</td>
+                        <td><span class="status-vaga ${s.status_vaga === 'VAGA GARANTIDA' ? 'alocado' : 'espera'}">${escapeHtml(s.status_vaga)}</span></td>
                         <td>
                             <div class="table-actions">
                                 <button class="btn-print" style="padding: 6px 12px; font-size: 0.85rem;" onclick="showReceiptById(${s.id})">Recibo</button>
@@ -261,10 +378,10 @@ function renderStudentsList(students) {
     tbody.innerHTML = students.map((s) => `
         <tr>
             <td><strong>${s.position}º</strong></td>
-            <td>${s.timestamp}</td>
-            <td>${s.studentName}<br><span style="color: var(--text-muted); font-size: 0.85em;">${s.studentCpf || 'CPF não informado'}</span></td>
-            <td>${s.studentGrade} / ${s.studentShift}</td>
-            <td>${s.category}</td>
+            <td>${escapeHtml(s.timestamp)}</td>
+            <td>${escapeHtml(s.studentName)}<br><span style="color: var(--text-muted); font-size: 0.85em;">${escapeHtml(s.studentCpf) || 'CPF não informado'}</span></td>
+            <td>${escapeHtml(s.studentGrade)} / ${escapeHtml(s.studentShift)}</td>
+            <td>${escapeHtml(s.category)}</td>
             <td>
                 <div class="table-actions">
                     <button style="padding: 6px 12px; font-size: 0.85rem;" onclick="editStudent(${s.id})">Editar</button>
@@ -311,7 +428,7 @@ function editStudent(id) {
     setVal('studentRg', student.studentRg);
     setVal('studentCpf', student.studentCpf);
     setVal('studentNat', student.studentNat);
-    setVal('studentGrade', student.studentGrade);
+    setFieldValue('studentGrade', student.studentGrade, GRADE_OPTIONS);
     setVal('studentShift', student.studentShift);
     setVal('studentLaudo', student.studentLaudo);
     checkLaudo();
@@ -333,7 +450,7 @@ function editStudent(id) {
     setVal('respNum', student.respNum);
     setVal('respBairro', student.respBairro);
     setVal('respCep', student.respCep);
-    setVal('respCivil', student.respCivil);
+    setFieldValue('respCivil', student.respCivil, CIVIL_OPTIONS);
     setVal('respEduc', student.respEduc);
     setVal('respEmail', student.respEmail);
     setVal('respCompany', student.respCompany);
@@ -344,8 +461,8 @@ function editStudent(id) {
     setVal('emailMae', student.emailMae);
     setVal('telOutro', student.telOutro);
     setVal('emailOutro', student.emailOutro);
-    setVal('respFin', student.respFin);
-    setVal('respAcad', student.respAcad);
+    setFieldValue('respFin', student.respFin, RESP_OPTIONS);
+    setFieldValue('respAcad', student.respAcad, RESP_OPTIONS);
 
     document.getElementById('formTitle').textContent = 'Editando Cadastro';
     document.getElementById('formSubtitle').textContent = `Alterando os dados de ${student.studentName}. Salve para atualizar o cadastro.`;
@@ -373,6 +490,7 @@ function cancelEdit() {
     if (btnCancel) btnCancel.style.display = 'none';
     checkLaudo();
     checkIrmao();
+    ['studentGrade', 'respCivil', 'respFin', 'respAcad'].forEach(toggleOtherField);
 
     // Volta para a aba em que o usuário estava antes de iniciar a edição (ex: Lista & Busca)
     if (appState.editOriginTab && appState.editOriginTab !== 'tab-cadastro') {
@@ -383,7 +501,7 @@ function cancelEdit() {
 
 async function deleteStudent(id) {
     const student = appState.allStudents.find((s) => s.id === id);
-    const confirmed = await showConfirm(`Tem certeza que deseja apagar o cadastro de "${student ? student.studentName : 'este aluno'}"? Essa ação não pode ser desfeita.`);
+    const confirmed = await showConfirm(`Tem certeza que deseja apagar o cadastro de "${escapeHtml(student ? student.studentName : 'este aluno')}"? Essa ação não pode ser desfeita.`);
     if (!confirmed) return;
 
     try {
@@ -407,4 +525,5 @@ export {
     checkLaudo, checkIrmao, validarCPF, handleFormSubmit,
     showReceipt, closeReceipt, showReceiptById,
     renderVagas, renderStudentsList, filterTable, editStudent, cancelEdit, deleteStudent,
+    formatCPF, formatCNPJ, formatCEP, formatTelefone, toggleOtherField,
 };

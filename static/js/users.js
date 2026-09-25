@@ -1,7 +1,7 @@
 /*
  * Painel Admin: gestão dos usuários que têm login no sistema.
  */
-import { appState, API_URL, authHeaders } from './state.js';
+import { appState, API_URL, authHeaders, escapeHtml } from './state.js';
 import { showToast, showConfirm, showSuccessBanner } from './ui.js';
 import { renderAll, handleAuthResponse } from './auth.js';
 
@@ -143,8 +143,8 @@ async function renderUsers() {
         
         tbody.innerHTML = users.map((u) => `
             <tr>
-                <td>${u.name}</td>
-                <td>${u.login}</td>
+                <td>${escapeHtml(u.name)}</td>
+                <td>${escapeHtml(u.login)}</td>
                 <td>${u.role === 'admin' ? 'Administrador' : 'Atendente'}</td>
                 <td>
                     <div class="table-actions">

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import User
+from app.models import User, UserRoleEnum
 from app.schemas import UserCreate, UserResponse
 from app.crud import add_log
 from app.security import hash_password
@@ -14,11 +14,14 @@ from app.dependencies import require_admin
 router = APIRouter(prefix="/api/users", tags=["Usuários"])
 
 
-# Modelo auxiliar para atualizar usuário sem precisar mexer no schemas.py
+# Modelo auxiliar para atualizar usuário sem precisar mexer no schemas.py.
+# ATENÇÃO: role usa UserRoleEnum (e não str solta) — antes, qualquer texto
+# (ex: "superadmin") era aceito aqui e explodia no ENUM do MySQL, virando
+# Erro 500. Com o enum, o Pydantic barra valores inválidos com erro 422.
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     pass_word: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[UserRoleEnum] = None
 
 
 @router.get("", response_model=List[UserResponse])

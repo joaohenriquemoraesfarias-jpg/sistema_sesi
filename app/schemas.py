@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import List, Optional
 from datetime import datetime
 from app.models import CategoryEnum, UserRoleEnum
@@ -52,6 +52,30 @@ class StudentBase(BaseModel):
     emailOutro: Optional[str] = None
     respFin: str
     respAcad: str
+
+    # --- Validações de formato (mesma regra aplicada no front-end, agora
+    # também conferida no servidor, já que o front-end pode ser burlado
+    # por quem chamar a API diretamente, sem passar pela tela) ---
+
+    @field_validator("respCep")
+    @classmethod
+    def validar_cep(cls, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if len(digits) != 8:
+            raise ValueError("CEP inválido: precisa ter 8 dígitos (formato 00000-000)")
+        return value
+
+    @field_validator("telPai", "telMae", "telOutro")
+    @classmethod
+    def validar_telefone(cls, value: Optional[str]) -> Optional[str]:
+        if not value:
+            return value
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if len(digits) not in (10, 11):
+            raise ValueError("Telefone inválido: precisa ter 10 ou 11 dígitos (com DDD)")
+        return value
 
 class StudentCreate(StudentBase):
     pass

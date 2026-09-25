@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão Escolar - SESI</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body data-theme="light">
     
@@ -125,7 +125,7 @@
                         </div>
                         <div class="form-group">
                             <label for="studentCpf">CPF</label>
-                            <input type="text" id="studentCpf" placeholder="000.000.000-00">
+                            <input type="text" id="studentCpf" placeholder="000.000.000-00" maxlength="14" oninput="this.value = formatCPF(this.value)">
                         </div>
                         <div class="form-group">
                             <label for="studentNat">Naturalidade</label>
@@ -133,7 +133,24 @@
                         </div>
                         <div class="form-group">
                             <label for="studentGrade">Série/Ano</label>
-                            <input type="text" id="studentGrade" placeholder="Ex: 1º Ano Médio" required>
+                            <select id="studentGrade" onchange="toggleOtherField('studentGrade')" required>
+                                <option value="" disabled selected>Selecione a série</option>
+                                <option value="Educação Infantil">Educação Infantil</option>
+                                <option value="1º Ano Fundamental">1º Ano Fundamental</option>
+                                <option value="2º Ano Fundamental">2º Ano Fundamental</option>
+                                <option value="3º Ano Fundamental">3º Ano Fundamental</option>
+                                <option value="4º Ano Fundamental">4º Ano Fundamental</option>
+                                <option value="5º Ano Fundamental">5º Ano Fundamental</option>
+                                <option value="6º Ano Fundamental">6º Ano Fundamental</option>
+                                <option value="7º Ano Fundamental">7º Ano Fundamental</option>
+                                <option value="8º Ano Fundamental">8º Ano Fundamental</option>
+                                <option value="9º Ano Fundamental">9º Ano Fundamental</option>
+                                <option value="1º Ano Médio">1º Ano Médio</option>
+                                <option value="2º Ano Médio">2º Ano Médio</option>
+                                <option value="3º Ano Médio">3º Ano Médio</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                            <input type="text" id="studentGradeOther" placeholder="Digite a série" style="display:none; margin-top: 8px;">
                         </div>
                         <div class="form-group col-span-2">
                             <label for="studentShift">Turno</label>
@@ -191,7 +208,7 @@
                         </div>
                         <div class="form-group">
                             <label for="respCpf">CPF</label>
-                            <input type="text" id="respCpf" placeholder="000.000.000-00" required>
+                            <input type="text" id="respCpf" placeholder="000.000.000-00" maxlength="14" oninput="this.value = formatCPF(this.value)" required>
                         </div>
                         <div class="form-group">
                             <label for="respNat">Naturalidade</label>
@@ -211,11 +228,20 @@
                         </div>
                         <div class="form-group">
                             <label for="respCep">CEP</label>
-                            <input type="text" id="respCep" placeholder="00000-000">
+                            <input type="text" id="respCep" placeholder="00000-000" maxlength="9" inputmode="numeric" oninput="this.value = formatCEP(this.value)">
                         </div>
                         <div class="form-group">
                             <label for="respCivil">Estado Civil</label>
-                            <input type="text" id="respCivil" placeholder="Ex: Casado(a), Solteiro(a)...">
+                            <select id="respCivil" onchange="toggleOtherField('respCivil')">
+                                <option value="" disabled selected>Selecione</option>
+                                <option value="Solteiro(a)">Solteiro(a)</option>
+                                <option value="Casado(a)">Casado(a)</option>
+                                <option value="Divorciado(a)">Divorciado(a)</option>
+                                <option value="Viúvo(a)">Viúvo(a)</option>
+                                <option value="União Estável">União Estável</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                            <input type="text" id="respCivilOther" placeholder="Digite o estado civil" style="display:none; margin-top: 8px;">
                         </div>
                         <div class="form-group col-span-2">
                             <label for="respEduc">Grau de Escolaridade</label>
@@ -231,11 +257,11 @@
                         </div>
                         <div class="form-group">
                             <label for="respCnpj">CNPJ da Empresa</label>
-                            <input type="text" id="respCnpj" placeholder="00.000.000/0001-00">
+                            <input type="text" id="respCnpj" placeholder="00.000.000/0001-00" maxlength="18" oninput="this.value = formatCNPJ(this.value)">
                         </div>
                         <div class="form-group">
                             <label for="telPai">Telefone(s) (Pai)</label>
-                            <input type="text" id="telPai" placeholder="(00) 00000-0000">
+                            <input type="text" id="telPai" placeholder="(00) 00000-0000" maxlength="15" inputmode="numeric" oninput="this.value = formatTelefone(this.value)">
                         </div>
                         <div class="form-group col-span-2">
                             <label for="emailPai">E-mail (Pai)</label>
@@ -259,21 +285,23 @@
                         </div>
                         <div class="form-group">
                             <label for="respFin">Responsável Financeiro</label>
-                            <select id="respFin" required>
+                            <select id="respFin" onchange="toggleOtherField('respFin')" required>
                                 <option value="" disabled selected>Selecione</option>
                                 <option value="Pai">Pai</option>
                                 <option value="Mãe">Mãe</option>
                                 <option value="Outro">Outro</option>
                             </select>
+                            <input type="text" id="respFinOther" placeholder="Quem é o responsável financeiro?" style="display:none; margin-top: 8px;">
                         </div>
                         <div class="form-group col-span-2">
                             <label for="respAcad">Responsável Acadêmico</label>
-                            <select id="respAcad" required>
+                            <select id="respAcad" onchange="toggleOtherField('respAcad')" required>
                                 <option value="" disabled selected>Selecione</option>
                                 <option value="Pai">Pai</option>
                                 <option value="Mãe">Mãe</option>
                                 <option value="Outro">Outro</option>
                             </select>
+                            <input type="text" id="respAcadOther" placeholder="Quem é o responsável acadêmico?" style="display:none; margin-top: 8px;">
                         </div>
 
                         <!-- Botões de Ação -->
@@ -497,6 +525,6 @@
     </div>
 
     <div id="toastBox"></div>
-    <script type="module" src="js/main.js?v=11"></script>
+    <script type="module" src="js/main.js?v=12"></script>
 </body>
 </html>

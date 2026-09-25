@@ -14,7 +14,7 @@
 import { applyAccessibilityPreferences, changeFontSize, toggleHighContrast, toggleDyslexiaFont, toggleLineSpacing, resetAccessibility, toggleAccessibilityPanel } from './accessibility.js';
 import { closeSuccessBanner } from './ui.js';
 import { restoreSession, toggleTheme, handleLogin, logout, switchTab } from './auth.js';
-import { checkLaudo, checkIrmao, handleFormSubmit, closeReceipt, showReceiptById, renderVagas, filterTable, editStudent, cancelEdit, deleteStudent } from './students.js';
+import { checkLaudo, checkIrmao, handleFormSubmit, closeReceipt, showReceiptById, renderVagas, filterTable, editStudent, cancelEdit, deleteStudent, formatCPF, formatCNPJ, formatCEP, formatTelefone, toggleOtherField } from './students.js';
 import { clearHistory } from './history.js';
 import { addReminder, toggleReminder, deleteReminder, clearCompletedReminders, toggleCompletedReminders } from './reminders.js';
 import { handleCreateUser, editUser, cancelUserEdit, apagarUsuario } from './users.js';
@@ -63,6 +63,7 @@ Object.assign(window, {
     handleLogin, logout, switchTab,
     // alunos
     checkLaudo, checkIrmao, handleFormSubmit, closeReceipt, showReceiptById, renderVagas, filterTable, editStudent, cancelEdit, deleteStudent,
+    formatCPF, formatCNPJ, formatCEP, formatTelefone, toggleOtherField,
     // histórico
     clearHistory,
     // lembretes
